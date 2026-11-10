@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// OM STUDY AI: Firestore सुरक्षा नियम (संस्करण 0.2.0)
+// सिद्धांत: हर स्टूडेंट सिर्फ अपना डेटा पढ़-लिख सकता है। बाकी सब बंद।
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // हर स्टूडेंट का प्रोफाइल: users/{uid}
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['displayName', 'email', 'language', 'createdAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.language in ['hi', 'en', 'hinglish']
+        && request.resource.data.createdAt == request.time;
+
+      // सिर्फ नाम और भाषा बदली जा सकती है। createdAt, email वगैरह नहीं।
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'language'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.language in ['hi', 'en', 'hinglish'];
+
+      // अकाउंट मिटाने की सुविधा बाद के चरण में आएगी
+      allow delete: if false;
+    }
+
+    // admin की सूची: कोई स्टूडेंट खुद को admin नहीं बना सकता। सिर्फ Firebase कंसोल से हाथ से जोड़ी जाती है।
+    match /admins/{adminUid} {
+      allow read: if request.auth != null && request.auth.uid == adminUid;
+      allow write: if false;
+    }
+
+    // बाकी सब कुछ बंद
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

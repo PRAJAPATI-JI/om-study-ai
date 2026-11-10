@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "497849352627",
+    "project_id": "om-study-ai",
+    "storage_bucket": "om-study-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:497849352627:android:e4eb23d54aedc31d700bc6",
+        "android_client_info": {
+          "package_name": "com.omstudy.ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJLuC6EgS4G_B0--K6sTS3tSfm9o0ZDl8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
