@@ -54,3 +54,11 @@ data class AlarmLogEntity(
     val action: String,
     val ownerUid: String = ""
 )
+
+/** पहली बार की जानकारी (onboarding) का हर जवाब। (ownerUid, key) मिलकर पहचान हैं, यानी हर अकाउंट के अपने जवाब। */
+@Entity(tableName = "profile_answers", primaryKeys = ["ownerUid", "key"])
+data class ProfileAnswerEntity(
+    val ownerUid: String,
+    val key: String,
+    val value: String
+)

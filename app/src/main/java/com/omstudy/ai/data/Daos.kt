@@ -70,3 +70,18 @@ interface LogDao {
     @Query("DELETE FROM alarm_logs WHERE ownerUid = :uid")
     suspend fun deleteAllFor(uid: String)
 }
+
+@Dao
+interface ProfileDao {
+    @Query("SELECT * FROM profile_answers WHERE ownerUid = :uid")
+    fun observe(uid: String): Flow<List<ProfileAnswerEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(answer: ProfileAnswerEntity)
+
+    @Query("DELETE FROM profile_answers WHERE ownerUid = :uid AND key = :key")
+    suspend fun delete(uid: String, key: String)
+
+    @Query("DELETE FROM profile_answers WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}
