@@ -43,6 +43,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.omstudy.ai.alarm.RepeatRule
+import com.omstudy.ai.data.Keys
+import com.omstudy.ai.data.Onboarding
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -91,6 +95,8 @@ fun HomeScreen(vm: MainViewModel, goTo: (Int) -> Unit) {
     val tasks by vm.todayTasks.collectAsState()
     val logs by vm.todayLogs.collectAsState()
     val name by vm.userName.collectAsState()
+    val answers by vm.answers.collectAsState()
+    val ctx = LocalContext.current
 
     val now = LocalDateTime.now()
     val next = alarms.filter { it.enabled }.mapNotNull { a ->
@@ -112,6 +118,22 @@ fun HomeScreen(vm: MainViewModel, goTo: (Int) -> Unit) {
             fontWeight = FontWeight.Bold
         )
         Text(fmtDate(today.toEpochDay()), fontSize = 15.sp)
+
+        answers?.let { a ->
+            Card {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("मेरे लक्ष्य", fontWeight = FontWeight.SemiBold)
+                    Onboarding.goalLabel(a).forEach { Text("• $it") }
+                    a[Keys.DAILY_MIN]?.toIntOrNull()?.let { Text("रोज़ का समय: ${it / 60} घंटे", fontSize = 14.sp) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            vm.activatePlan { n -> Toast.makeText(ctx, "$n काम प्लानर में जुड़े", Toast.LENGTH_LONG).show() }
+                        }) { Text("योजना फिर बनाएँ") }
+                        OutlinedButton(onClick = { vm.reopenReview() }) { Text("जवाब बदलें") }
+                    }
+                }
+            }
+        }
 
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

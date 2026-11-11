@@ -49,6 +49,10 @@ interface TaskDao {
     @Delete
     suspend fun delete(task: TaskEntity)
 
+    /** पुरानी अपने-आप बनी योजना के बचे हुए (अधूरे) काम हटाना, ताकि दोबारा बनाने पर दोहराव न हो */
+    @Query("DELETE FROM tasks WHERE ownerUid = :uid AND note = :tag AND done = 0 AND epochDay >= :fromDay")
+    suspend fun deleteAutoPlan(uid: String, tag: String, fromDay: Long)
+
     @Query("UPDATE tasks SET ownerUid = :uid WHERE ownerUid = ''")
     suspend fun claimLegacy(uid: String)
 

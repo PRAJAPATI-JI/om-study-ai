@@ -10,6 +10,10 @@ import com.omstudy.ai.data.AppDatabase
 import com.omstudy.ai.data.AuthRepository
 import com.omstudy.ai.data.Prefs
 import com.omstudy.ai.data.TaskEntity
+import com.omstudy.ai.data.Keys
+import com.omstudy.ai.data.Onboarding
+import com.omstudy.ai.data.ProfileAnswerEntity
+import com.omstudy.ai.data.StudyPlanner
 import com.omstudy.ai.data.AlarmLogEntity
 import com.omstudy.ai.data.dataStore
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +31,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
+
+const val PLAN_NOTE = "सुझाई गई योजना"
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val ctx = app.applicationContext
@@ -69,6 +75,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** इस अकाउंट के onboarding जवाब। null = अभी लोड हो रहे हैं (या लॉगिन नहीं है)। */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val answers: StateFlow<Map<String, String>?> = uidFlow
+        .flatMapLatest { u ->
+            if (u == null) flowOf<Map<String, String>?>(null)
+            else db.profileDao().observe(u).map { rows -> rows.associate { it.key to it.value } }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val themeMode = ctx.dataStore.data.map { it[Prefs.THEME] ?: 0 }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
@@ -125,6 +140,50 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.taskDao().upsert(task.copy(epochDay = task.epochDay + 1, done = false, doneAt = null))
     }
 
+    // ---- onboarding और योजना ----
+    fun saveAnswer(key: String, value: String) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.profileDao().upsert(ProfileAnswerEntity(u, key, value))
+        // कक्षा/स्ट्रीम बदलने पर पुराने विषय अब सही नहीं रहते, इसलिए दोबारा पूछे जाएँगे
+        if (key == Keys.CLASS || key == Keys.STREAM) {
+            db.profileDao().delete(u, Keys.SUBJECTS)
+            db.profileDao().delete(u, Keys.WEAK)
+        }
+    }
+
+    fun clearAnswer(key: String) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.profileDao().delete(u, key)
+        if (key == Keys.CLASS || key == Keys.STREAM) {
+            db.profileDao().delete(u, Keys.SUBJECTS)
+            db.profileDao().delete(u, Keys.WEAK)
+        }
+    }
+
+    fun confirmOnboarding() = saveAnswer(Keys.DONE, "1")
+
+    /** "जवाब देखें/बदलें" खोलना */
+    fun reopenReview() = clearAnswer(Keys.DONE)
+
+    /** सुझाई गई 7 दिन की योजना को प्लानर में जोड़ना। पुरानी अधूरी अपने-आप बनी योजना पहले हट जाती है। */
+    fun activatePlan(onDone: (Int) -> Unit = {}) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        val a = answers.value ?: return@launch
+        val today = LocalDate.now()
+        val items = StudyPlanner.generate(a, today.toEpochDay(), today.dayOfWeek.value - 1, 7)
+        db.taskDao().deleteAutoPlan(u, PLAN_NOTE, today.toEpochDay())
+        items.forEach {
+            db.taskDao().upsert(
+                TaskEntity(
+                    title = it.subject, subject = it.subject, epochDay = it.epochDay,
+                    startMinutes = it.startMinutes, durationMin = it.durationMin,
+                    priority = if (it.isRevision) 2 else 1, note = PLAN_NOTE, ownerUid = u
+                )
+            )
+        }
+        withContext(Dispatchers.Main) { onDone(items.size) }
+    }
+
     // ---- सेटिंग्स और खाता ----
     fun setTheme(mode: Int) = viewModelScope.launch { ctx.dataStore.edit { it[Prefs.THEME] = mode } }
 
@@ -145,6 +204,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.alarmDao().deleteAllFor(u)
         db.taskDao().deleteAllFor(u)
         db.logDao().deleteAllFor(u)
+        db.profileDao().deleteAllFor(u)
         withContext(Dispatchers.Main) { onDone() }
     }
 }
