@@ -2,6 +2,7 @@ package com.omstudy.ai.data
 
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -90,6 +91,19 @@ object AuthRepository {
                 ).await()
             }
         }
+    }
+
+    /**
+     * अकाउंट हमेशा के लिए मिटाना। सुरक्षा के लिए पहले पासवर्ड से दोबारा पहचान ली जाती है।
+     * Firestore की प्रोफाइल मिटाना कोशिश भर है (इंटरनेट/नियम में दिक्कत हो तो भी अकाउंट मिट जाता है)।
+     */
+    suspend fun deleteAccount(password: String): Result<Unit> = runCatching {
+        val user = FirebaseAuth.getInstance().currentUser ?: error("not signed in")
+        val mail = user.email ?: error("no email")
+        user.reauthenticate(EmailAuthProvider.getCredential(mail, password)).await()
+        runCatching { FirebaseFirestore.getInstance().collection("users").document(user.uid).delete().await() }
+        user.delete().await()
+        Unit
     }
 
     suspend fun updateName(newName: String): Result<Unit> = runCatching {

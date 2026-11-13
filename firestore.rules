@@ -26,8 +26,8 @@ service cloud.firestore {
         && request.resource.data.displayName.size() <= 40
         && request.resource.data.language in ['hi', 'en', 'hinglish'];
 
-      // अकाउंट मिटाने की सुविधा बाद के चरण में आएगी
-      allow delete: if false;
+      // अपना अकाउंट मिटाते समय सिर्फ अपना प्रोफाइल मिट सकता है
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // admin की सूची: कोई स्टूडेंट खुद को admin नहीं बना सकता। सिर्फ Firebase कंसोल से हाथ से जोड़ी जाती है।

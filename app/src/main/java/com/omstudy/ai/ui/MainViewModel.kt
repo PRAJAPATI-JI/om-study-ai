@@ -10,6 +10,12 @@ import com.omstudy.ai.data.AppDatabase
 import com.omstudy.ai.data.AuthRepository
 import com.omstudy.ai.data.Prefs
 import com.omstudy.ai.data.TaskEntity
+import com.omstudy.ai.data.ChapterEntity
+import com.omstudy.ai.data.NoteEntity
+import com.omstudy.ai.data.QuestionEntity
+import com.omstudy.ai.data.QuizAnswerEntity
+import com.omstudy.ai.data.SavedVideoEntity
+import kotlinx.coroutines.flow.Flow
 import com.omstudy.ai.data.Keys
 import com.omstudy.ai.data.Onboarding
 import com.omstudy.ai.data.ProfileAnswerEntity
@@ -84,6 +90,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             else db.profileDao().observe(u).map { rows -> rows.associate { it.key to it.value } }
         }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun <T> byUid(source: (String) -> Flow<List<T>>): StateFlow<List<T>> = uidFlow
+        .flatMapLatest { u -> if (u == null) flowOf(emptyList()) else source(u) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val chapters = byUid { db.chapterDao().observe(it) }
+    val notes = byUid { db.noteDao().observe(it) }
+    val questions = byUid { db.questionDao().observe(it) }
+    val quizAnswers = byUid { db.quizAnswerDao().observe(it) }
+    val videos = byUid { db.videoDao().observe(it) }
+    val doneTasksWeek = byUid { db.taskDao().observeDoneSince(it, LocalDate.now().toEpochDay() - 6) }
 
     val themeMode = ctx.dataStore.data.map { it[Prefs.THEME] ?: 0 }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
@@ -184,6 +202,67 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         withContext(Dispatchers.Main) { onDone(items.size) }
     }
 
+    // ---- सिलेबस (विद्यार्थी का अपना) ----
+    fun addChapters(subject: String, titles: List<String>) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        val sub = subject.trim().take(60).ifBlank { "अन्य" }
+        val start = db.chapterDao().maxPosition(u, sub) + 1
+        db.chapterDao().insertAll(titles.mapIndexed { i, t ->
+            ChapterEntity(ownerUid = u, subject = sub, title = t.trim().take(100), position = start + i)
+        })
+    }
+
+    fun toggleChapter(c: ChapterEntity, done: Boolean) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.chapterDao().setDone(c.id, u, done, if (done) System.currentTimeMillis() else null)
+    }
+
+    fun deleteChapter(c: ChapterEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.chapterDao().delete(c.id, u)
+    }
+
+    // ---- नोट्स ----
+    fun saveNote(n: NoteEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.noteDao().upsert(n.copy(ownerUid = u, updatedAt = System.currentTimeMillis()))
+    }
+
+    fun deleteNote(n: NoteEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.noteDao().delete(n.id, u)
+    }
+
+    // ---- प्रश्न और क्विज़ ----
+    fun saveQuestion(q: QuestionEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.questionDao().upsert(q.copy(ownerUid = u))
+    }
+
+    fun deleteQuestion(q: QuestionEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.questionDao().delete(q.id, u)
+        db.quizAnswerDao().deleteForQuestion(u, q.id)
+    }
+
+    fun recordAnswer(q: QuestionEntity, correct: Boolean) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.quizAnswerDao().insert(
+            QuizAnswerEntity(ownerUid = u, questionId = q.id, subject = q.subject, chapter = q.chapter, correct = correct)
+        )
+    }
+
+    // ---- वीडियो लिंक ----
+    fun saveVideo(v: SavedVideoEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.videoDao().upsert(v.copy(ownerUid = u))
+    }
+
+    fun deleteVideo(v: SavedVideoEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.videoDao().delete(v.id, u)
+    }
+
     // ---- सेटिंग्स और खाता ----
     fun setTheme(mode: Int) = viewModelScope.launch { ctx.dataStore.edit { it[Prefs.THEME] = mode } }
 
@@ -204,7 +283,30 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.alarmDao().deleteAllFor(u)
         db.taskDao().deleteAllFor(u)
         db.logDao().deleteAllFor(u)
-        db.profileDao().deleteAllFor(u)
+        wipeLocal(u)
         withContext(Dispatchers.Main) { onDone() }
+    }
+
+    private suspend fun wipeLocal(u: String) {
+        db.profileDao().deleteAllFor(u)
+        db.chapterDao().deleteAllFor(u)
+        db.noteDao().deleteAllFor(u)
+        db.questionDao().deleteAllFor(u)
+        db.quizAnswerDao().deleteAllFor(u)
+        db.videoDao().deleteAllFor(u)
+    }
+
+    /** अकाउंट हमेशा के लिए मिटाना (पासवर्ड से पुष्टि)। सफल होने पर इस अकाउंट का फोन-डेटा भी मिट जाता है। */
+    fun deleteAccount(password: String, onResult: (Result<Unit>) -> Unit) = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value
+        val result = AuthRepository.deleteAccount(password)
+        if (result.isSuccess && u != null) {
+            db.alarmDao().all().filter { it.ownerUid == u }.forEach { AlarmScheduler.cancel(ctx, it.id) }
+            db.alarmDao().deleteAllFor(u)
+            db.taskDao().deleteAllFor(u)
+            db.logDao().deleteAllFor(u)
+            wipeLocal(u)
+        }
+        withContext(Dispatchers.Main) { onResult(result) }
     }
 }

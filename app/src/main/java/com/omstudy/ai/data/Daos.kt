@@ -46,6 +46,10 @@ interface TaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(task: TaskEntity): Long
 
+    /** पूरे किए गए काम, किसी दिन से आगे (प्रगति स्क्रीन के लिए) */
+    @Query("SELECT * FROM tasks WHERE ownerUid = :uid AND done = 1 AND epochDay >= :fromDay")
+    fun observeDoneSince(uid: String, fromDay: Long): Flow<List<TaskEntity>>
+
     @Delete
     suspend fun delete(task: TaskEntity)
 
@@ -87,5 +91,86 @@ interface ProfileDao {
     suspend fun delete(uid: String, key: String)
 
     @Query("DELETE FROM profile_answers WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}
+
+@Dao
+interface ChapterDao {
+    @Query("SELECT * FROM chapters WHERE ownerUid = :uid ORDER BY subject, position, id")
+    fun observe(uid: String): Flow<List<ChapterEntity>>
+
+    @Insert
+    suspend fun insertAll(items: List<ChapterEntity>)
+
+    @Query("SELECT COALESCE(MAX(position), -1) FROM chapters WHERE ownerUid = :uid AND subject = :subject")
+    suspend fun maxPosition(uid: String, subject: String): Int
+
+    @Query("UPDATE chapters SET done = :done, doneAt = :at WHERE id = :id AND ownerUid = :uid")
+    suspend fun setDone(id: Long, uid: String, done: Boolean, at: Long?)
+
+    @Query("DELETE FROM chapters WHERE id = :id AND ownerUid = :uid")
+    suspend fun delete(id: Long, uid: String)
+
+    @Query("DELETE FROM chapters WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}
+
+@Dao
+interface NoteDao {
+    @Query("SELECT * FROM notes WHERE ownerUid = :uid ORDER BY bookmarked DESC, updatedAt DESC")
+    fun observe(uid: String): Flow<List<NoteEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(note: NoteEntity)
+
+    @Query("DELETE FROM notes WHERE id = :id AND ownerUid = :uid")
+    suspend fun delete(id: Long, uid: String)
+
+    @Query("DELETE FROM notes WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}
+
+@Dao
+interface QuestionDao {
+    @Query("SELECT * FROM questions WHERE ownerUid = :uid ORDER BY subject, id DESC")
+    fun observe(uid: String): Flow<List<QuestionEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(q: QuestionEntity)
+
+    @Query("DELETE FROM questions WHERE id = :id AND ownerUid = :uid")
+    suspend fun delete(id: Long, uid: String)
+
+    @Query("DELETE FROM questions WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}
+
+@Dao
+interface QuizAnswerDao {
+    @Insert
+    suspend fun insert(a: QuizAnswerEntity)
+
+    @Query("SELECT * FROM quiz_answers WHERE ownerUid = :uid ORDER BY answeredAt")
+    fun observe(uid: String): Flow<List<QuizAnswerEntity>>
+
+    @Query("DELETE FROM quiz_answers WHERE ownerUid = :uid AND questionId = :qid")
+    suspend fun deleteForQuestion(uid: String, qid: Long)
+
+    @Query("DELETE FROM quiz_answers WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}
+
+@Dao
+interface VideoDao {
+    @Query("SELECT * FROM saved_videos WHERE ownerUid = :uid ORDER BY createdAt DESC")
+    fun observe(uid: String): Flow<List<SavedVideoEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(v: SavedVideoEntity)
+
+    @Query("DELETE FROM saved_videos WHERE id = :id AND ownerUid = :uid")
+    suspend fun delete(id: Long, uid: String)
+
+    @Query("DELETE FROM saved_videos WHERE ownerUid = :uid")
     suspend fun deleteAllFor(uid: String)
 }

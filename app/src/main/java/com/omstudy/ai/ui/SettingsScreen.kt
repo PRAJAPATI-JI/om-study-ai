@@ -54,6 +54,7 @@ fun SettingsScreen(vm: MainViewModel) {
     val savedName by vm.userName.collectAsState()
     val email by vm.email.collectAsState()
     var showLogout by remember { mutableStateOf(false) }
+    var showDelete by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var showClear by remember { mutableStateOf(false) }
 
@@ -135,18 +136,54 @@ fun SettingsScreen(vm: MainViewModel) {
                     onClick = { showClear = true },
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("इस अकाउंट का फोन-डेटा मिटाएँ", color = MaterialTheme.colorScheme.error) }
+                OutlinedButton(
+                    onClick = { showDelete = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("मेरा अकाउंट हमेशा के लिए मिटाएँ", color = MaterialTheme.colorScheme.error) }
             }
         }
 
         Card {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("ऐप के बारे में", fontWeight = FontWeight.SemiBold)
-                Text("OM STUDY AI · संस्करण 0.2.0 (दूसरा चरण)")
-                Text("इस संस्करण में: अकाउंट (साइनअप/लॉगिन/पासवर्ड रीसेट/लॉगआउट), अलार्म, प्लानर, कैलकुलेटर, फोकस टाइमर, थीम।", fontSize = 13.sp)
+                Text("OM STUDY AI · संस्करण 0.3.0 (तीसरा चरण)")
+                Text("इस संस्करण में: अकाउंट, जानकारी वाले सवाल और योजना, अलार्म, प्लानर, सिलेबस, नोट्स, क्विज़, वीडियो लिंक, प्रगति, कैलकुलेटर, टाइमर, थीम।", fontSize = 13.sp)
                 Text("अभी नहीं: AI शिक्षक, आवाज़, JAC/सरकारी परीक्षा सामग्री, क्विज़, बैकअप।", fontSize = 13.sp)
             }
         }
         Spacer(Modifier.height(8.dp))
+    }
+
+    if (showDelete) {
+        var pw by remember { mutableStateOf("") }
+        var err by remember { mutableStateOf<String?>(null) }
+        var busy by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!busy) showDelete = false },
+            title = { Text("अकाउंट हमेशा के लिए मिटाएँ?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("आपका अकाउंट, ईमेल-लॉगिन और इस फोन का सारा डेटा (अलार्म, काम, नोट्स, प्रश्न, सिलेबस) मिट जाएगा। यह वापस नहीं हो सकता। पुष्टि के लिए अपना पासवर्ड लिखिए।")
+                    OutlinedTextField(
+                        value = pw, onValueChange = { pw = it }, label = { Text("पासवर्ड") }, singleLine = true,
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    err?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = pw.isNotEmpty() && !busy, onClick = {
+                    busy = true; err = null
+                    vm.deleteAccount(pw) { r ->
+                        busy = false
+                        r.onSuccess { showDelete = false }
+                            .onFailure { err = com.omstudy.ai.data.AuthRepository.friendlyError(it) }
+                    }
+                }) { Text(if (busy) "मिटा रहे हैं..." else "हाँ, हमेशा के लिए मिटाएँ") }
+            },
+            dismissButton = { TextButton(enabled = !busy, onClick = { showDelete = false }) { Text("रहने दें") } }
+        )
     }
 
     if (showLogout) {

@@ -59,7 +59,7 @@ fun MainApp(vm: MainViewModel) {
         NavItem("होम", Icons.Default.Home),
         NavItem("प्लानर", Icons.Default.Checklist),
         NavItem("अलार्म", Icons.Default.Alarm),
-        NavItem("टूल्स", Icons.Default.Calculate),
+        NavItem("सीखें", Icons.Default.Calculate),
         NavItem("सेटिंग्स", Icons.Default.Settings)
     )
     Scaffold(
@@ -82,7 +82,7 @@ fun MainApp(vm: MainViewModel) {
                 0 -> HomeScreen(vm) { tab = it }
                 1 -> PlannerScreen(vm)
                 2 -> AlarmsScreen(vm)
-                3 -> ToolsScreen()
+                3 -> LearnHub(vm)
                 else -> SettingsScreen(vm)
             }
         }
@@ -182,7 +182,7 @@ fun HomeScreen(vm: MainViewModel, goTo: (Int) -> Unit) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = { goTo(3) }, modifier = Modifier.weight(1f)) { Text("कैलकुलेटर / टाइमर") }
+            OutlinedButton(onClick = { goTo(3) }, modifier = Modifier.weight(1f)) { Text("सीखें: सिलेबस, नोट्स, क्विज़, वीडियो") }
         }
 
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
@@ -190,7 +190,7 @@ fun HomeScreen(vm: MainViewModel, goTo: (Int) -> Unit) {
                 Text("अभी बने नहीं हैं (आगे के चरणों में आएँगे)", fontWeight = FontWeight.SemiBold)
                 listOf(
                     "AI शिक्षक", "JAC 12वीं पाठ्यसामग्री", "सरकारी परीक्षा अभ्यास",
-                    "क्विज़ / मॉक टेस्ट", "बेसिक गणित कोर्स", "असिस्टेंट इलेक्ट्रीशियन"
+                    "बेसिक गणित कोर्स", "असिस्टेंट इलेक्ट्रीशियन"
                 ).forEach { feature ->
                     OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
                         Text("$feature · जल्द आ रहा है")
