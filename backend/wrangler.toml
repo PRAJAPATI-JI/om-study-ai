@@ -1,0 +1,19 @@
+name = "om-study-ai-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+FIREBASE_PROJECT_ID = "om-study-ai"
+# OWNER_UID: मालिक का Firebase UID। इसे Cloudflare dashboard में Variables में डालिए (README_BACKEND_HINDI.md देखें)।
+
+# D1 डेटाबेस: deploy workflow इसे अपने-आप बनाकर database_id यहाँ भर देता है।
+[[d1_databases]]
+binding = "DB"
+database_name = "om-study-ai"
+database_id = "REPLACE_BY_DEPLOY_WORKFLOW"
+migrations_dir = "migrations"
