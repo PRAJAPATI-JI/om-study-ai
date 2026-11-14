@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>OM STUDY AI — Owner Admin</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="login" class="center" hidden>
+  <form id="loginForm" class="card narrow">
+    <h1>OM STUDY AI</h1>
+    <p class="muted">Owner Admin Panel — ऐप वाला ही ईमेल/पासवर्ड डालिए।</p>
+    <label>ईमेल <input id="email" type="email" autocomplete="username" required></label>
+    <label>पासवर्ड <input id="password" type="password" autocomplete="current-password" required></label>
+    <button class="primary" type="submit">लॉगिन</button>
+    <p id="loginMsg" class="err"></p>
+  </form>
+</div>
+<div id="app" hidden>
+  <header>
+    <button id="menuBtn" aria-label="मेन्यू">☰</button>
+    <strong id="title">Dashboard</strong>
+    <span id="roleBadge" class="badge"></span>
+    <button id="themeBtn" aria-label="थीम">◐</button>
+    <button id="logoutBtn">लॉगआउट</button>
+  </header>
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div id="toast" role="status"></div>
+<script src="/app.js" type="module"></script>
+</body>
+</html>
