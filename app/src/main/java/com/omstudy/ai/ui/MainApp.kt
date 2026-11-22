@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Home
@@ -60,6 +61,7 @@ fun MainApp(vm: MainViewModel) {
         NavItem("प्लानर", Icons.Default.Checklist),
         NavItem("अलार्म", Icons.Default.Alarm),
         NavItem("सीखें", Icons.Default.Calculate),
+        NavItem("AI", Icons.Default.AutoAwesome),
         NavItem("सेटिंग्स", Icons.Default.Settings)
     )
     Scaffold(
@@ -83,6 +85,7 @@ fun MainApp(vm: MainViewModel) {
                 1 -> PlannerScreen(vm)
                 2 -> AlarmsScreen(vm)
                 3 -> LearnHub(vm)
+                4 -> AiScreen()
                 else -> SettingsScreen(vm)
             }
         }

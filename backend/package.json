@@ -1,0 +1,11 @@
+{
+  "name": "om-study-ai-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/backend.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
