@@ -131,3 +131,14 @@ data class SavedVideoEntity(
     val watched: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+/** AI चैट का एक संदेश (फोन में, अकाउंट-वार)। role = user / assistant / error */
+@Entity(tableName = "chat_messages")
+data class ChatEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val ownerUid: String,
+    val role: String,
+    val text: String,
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis()
+)

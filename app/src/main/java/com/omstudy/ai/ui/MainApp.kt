@@ -85,7 +85,7 @@ fun MainApp(vm: MainViewModel) {
                 1 -> PlannerScreen(vm)
                 2 -> AlarmsScreen(vm)
                 3 -> LearnHub(vm)
-                4 -> AiScreen()
+                4 -> AiScreen(vm)
                 else -> SettingsScreen(vm)
             }
         }

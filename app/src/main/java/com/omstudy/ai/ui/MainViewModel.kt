@@ -98,6 +98,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     val chapters = byUid { db.chapterDao().observe(it) }
     val notes = byUid { db.noteDao().observe(it) }
+    val chat = byUid { db.chatDao().observe(it) }
     val questions = byUid { db.questionDao().observe(it) }
     val quizAnswers = byUid { db.quizAnswerDao().observe(it) }
     val videos = byUid { db.videoDao().observe(it) }
@@ -294,6 +295,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         db.questionDao().deleteAllFor(u)
         db.quizAnswerDao().deleteAllFor(u)
         db.videoDao().deleteAllFor(u)
+        db.chatDao().deleteAllFor(u)
+    }
+
+    fun addChat(role: String, text: String, note: String = "") = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.chatDao().insert(com.omstudy.ai.data.ChatEntity(ownerUid = u, role = role, text = text, note = note))
+        db.chatDao().trim(u)
+    }
+
+    fun clearChat() = viewModelScope.launch(Dispatchers.IO) {
+        val u = AuthRepository.uid.value ?: return@launch
+        db.chatDao().deleteAllFor(u)
     }
 
     /** अकाउंट हमेशा के लिए मिटाना (पासवर्ड से पुष्टि)। सफल होने पर इस अकाउंट का फोन-डेटा भी मिट जाता है। */
