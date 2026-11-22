@@ -61,10 +61,10 @@ object AiClient {
     }
 
     /** messages: (role, content) जोड़ियाँ; आखिरी हमेशा "user" */
-    suspend fun chat(ctx: Context, messages: List<Pair<String, String>>): Result<AiReply> = runCatching {
+    suspend fun chat(ctx: Context, messages: List<Pair<String, String>>, task: String = "chat"): Result<AiReply> = runCatching {
         val arr = JSONArray()
         messages.forEach { (r, c) -> arr.put(JSONObject().put("role", r).put("content", c)) }
-        val body = JSONObject().put("task", "chat").put("messages", arr).toString()
+        val body = JSONObject().put("task", task).put("messages", arr).toString()
         val j = call(ctx, "POST", "/v1/ai/text", body)
         val prov = j.optJSONObject("provider")
         AiReply(j.optString("result"), prov?.optString("name").orEmpty(), j.optBoolean("fallback"))

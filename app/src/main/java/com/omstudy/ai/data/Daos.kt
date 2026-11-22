@@ -174,3 +174,19 @@ interface VideoDao {
     @Query("DELETE FROM saved_videos WHERE ownerUid = :uid")
     suspend fun deleteAllFor(uid: String)
 }
+
+@Dao
+interface ChatDao {
+    @Query("SELECT * FROM chat_messages WHERE ownerUid = :uid ORDER BY id ASC")
+    fun observe(uid: String): Flow<List<ChatEntity>>
+
+    @Insert
+    suspend fun insert(m: ChatEntity)
+
+    /** सिर्फ आखिरी 200 संदेश रखो */
+    @Query("DELETE FROM chat_messages WHERE ownerUid = :uid AND id NOT IN (SELECT id FROM chat_messages WHERE ownerUid = :uid ORDER BY id DESC LIMIT 200)")
+    suspend fun trim(uid: String)
+
+    @Query("DELETE FROM chat_messages WHERE ownerUid = :uid")
+    suspend fun deleteAllFor(uid: String)
+}

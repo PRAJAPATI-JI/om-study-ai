@@ -13,6 +13,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.omstudy.ai.data.NoteEntity
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,13 +55,15 @@ private fun errText(e: Throwable): String {
     return friendly
 }
 
-/** AI शिक्षक चैट। बातचीत सिर्फ इस स्क्रीन के खुले रहने तक रहती है (अभी फोन में सेव नहीं होती)। */
+/** AI शिक्षक चैट। बातचीत फोन में सेव रहती है (इस फोन में आपके अकाउंट के नाम से सेव रहती है)। */
 @Composable
-fun AiScreen() {
+fun AiScreen(vm: MainViewModel) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val server by ctx.dataStore.data.map { it[Prefs.SERVER_URL].orEmpty() }.collectAsState(initial = "")
-    val msgs = remember { mutableStateListOf<ChatMsg>() }
+    val saved by vm.chat.collectAsState()
+    val msgs = saved.map { ChatMsg(it.role, it.text, it.note) }
+    var task by remember { mutableStateOf("chat") }
     var input by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -75,13 +81,13 @@ fun AiScreen() {
     fun send() {
         val q = input.trim().take(AiRules.MAX_INPUT)
         if (q.isEmpty() || busy) return
-        msgs.add(ChatMsg("user", q)); input = ""; busy = true
-        val history = msgs.map { it.role to it.text }
+        val history = msgs.filter { it.role != "error" }.map { it.role to it.text } + ("user" to q)
+        vm.addChat("user", q); input = ""; busy = true
         val from = AiRules.trimHistory(history.map { it.first })
         scope.launch {
-            AiClient.chat(ctx, history.drop(from)).fold(
-                onSuccess = { r -> msgs.add(ChatMsg("assistant", r.text.ifBlank { "(खाली जवाब)" }, if (r.fallback) "दूसरी AI सेवा से मिला" else "")) },
-                onFailure = { e -> msgs.add(ChatMsg("error", errText(e))) }
+            AiClient.chat(ctx, history.drop(from), task).fold(
+                onSuccess = { r -> vm.addChat("assistant", r.text.ifBlank { "(खाली जवाब)" }, if (r.fallback) "दूसरी AI सेवा से मिला" else "") },
+                onFailure = { e -> vm.addChat("error", errText(e)) }
             )
             busy = false
         }
@@ -90,6 +96,10 @@ fun AiScreen() {
     Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("AI शिक्षक", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text("AI की बात हमेशा सही नहीं होती। परीक्षा की ज़रूरी बातें किताब/शिक्षक से जाँचिए। अपना पूरा नाम, पासवर्ड या निजी जानकारी यहाँ न लिखें।", fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            AiRules.TASKS.forEach { (k, label) -> FilterChip(selected = task == k, onClick = { task = k }, label = { Text(label) }) }
+            TextButton(onClick = { vm.clearChat() }, enabled = msgs.isNotEmpty()) { Text("चैट मिटाएँ") }
+        }
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(msgs) { m ->
                 val container = when (m.role) {
@@ -101,6 +111,12 @@ fun AiScreen() {
                     Column(Modifier.padding(10.dp)) {
                         Text(m.text)
                         if (m.note.isNotEmpty()) Text(m.note, fontSize = 11.sp)
+                        if (m.role == "assistant") {
+                            TextButton(onClick = {
+                                vm.saveNote(NoteEntity(ownerUid = "", title = "AI: " + m.text.lineSequence().first().take(40), body = m.text))
+                                Toast.makeText(ctx, "नोट्स में सेव हो गया", Toast.LENGTH_SHORT).show()
+                            }) { Text("नोट्स में सेव करें") }
+                        }
                     }
                 }
             }

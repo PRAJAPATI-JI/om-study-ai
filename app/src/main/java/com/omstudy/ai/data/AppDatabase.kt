@@ -8,16 +8,16 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 /**
- * डेटाबेस version 4। version 1 → 2 में हर टेबल में ownerUid कॉलम जुड़ता है, पुराना डेटा सुरक्षित रहता है।
+ * डेटाबेस version 5। version 1 → 2 में हर टेबल में ownerUid कॉलम जुड़ता है, पुराना डेटा सुरक्षित रहता है।
  * fallbackToDestructiveMigration जानबूझकर नहीं लगाया, ताकि अपडेट पर डेटा कभी न मिटे।
  */
 @Database(
     entities = [
         AlarmEntity::class, TaskEntity::class, AlarmLogEntity::class, ProfileAnswerEntity::class,
         ChapterEntity::class, NoteEntity::class, QuestionEntity::class, QuizAnswerEntity::class,
-        SavedVideoEntity::class
+        SavedVideoEntity::class, ChatEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun questionDao(): QuestionDao
     abstract fun quizAnswerDao(): QuizAnswerDao
     abstract fun videoDao(): VideoDao
+    abstract fun chatDao(): ChatDao
 
     companion object {
         @Volatile
@@ -85,13 +86,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** version 4 → 5: AI चैट संदेशों की नई टेबल। पुराना डेटा जस का तस। */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `chat_messages` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`ownerUid` TEXT NOT NULL, `role` TEXT NOT NULL, `text` TEXT NOT NULL, `note` TEXT NOT NULL, `createdAt` INTEGER NOT NULL)"
+                )
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "om_study.db"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build().also { instance = it }
             }
     }
 }

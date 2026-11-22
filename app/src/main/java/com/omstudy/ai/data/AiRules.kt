@@ -15,6 +15,8 @@ object AiRules {
     }
 
     /** सर्वर के error कोड का हिंदी संदेश */
+    val TASKS = listOf("chat" to "सवाल-जवाब", "explain" to "समझाओ", "notes" to "नोट्स", "quiz" to "क्विज़", "timetable" to "टाइमटेबल")
+
     fun friendlyCode(code: String): String = when (code) {
         "no_server" -> "पहले सेटिंग्स में AI सर्वर का पता डालिए।"
         "not_logged_in" -> "पहले लॉगिन कीजिए।"
