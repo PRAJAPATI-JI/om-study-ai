@@ -86,6 +86,8 @@ fun SettingsScreen(vm: MainViewModel) {
             }
         }
 
+        AiSettingsCard()
+
         Card {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("थीम", fontWeight = FontWeight.SemiBold)
@@ -148,7 +150,7 @@ fun SettingsScreen(vm: MainViewModel) {
                 Text("ऐप के बारे में", fontWeight = FontWeight.SemiBold)
                 Text("OM STUDY AI · संस्करण 0.3.0 (तीसरा चरण)")
                 Text("इस संस्करण में: अकाउंट, जानकारी वाले सवाल और योजना, अलार्म, प्लानर, सिलेबस, नोट्स, क्विज़, वीडियो लिंक, प्रगति, कैलकुलेटर, टाइमर, थीम।", fontSize = 13.sp)
-                Text("अभी नहीं: AI शिक्षक, आवाज़, JAC/सरकारी परीक्षा सामग्री, क्विज़, बैकअप।", fontSize = 13.sp)
+                Text("AI चैट तभी चलेगा जब आपका अपना AI सर्वर बनकर यहाँ जुड़ा हो। अभी नहीं: आवाज़, छवि, PDF/OCR, वीडियो AI, JAC/सरकारी परीक्षा सामग्री, बैकअप।", fontSize = 13.sp)
             }
         }
         Spacer(Modifier.height(8.dp))

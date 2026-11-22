@@ -11,4 +11,6 @@ object Prefs {
     /** 0 = फोन जैसा, 1 = लाइट, 2 = डार्क */
     val THEME = intPreferencesKey("theme")
     val NAME = stringPreferencesKey("name")
+    /** AI सर्वर (Cloudflare Worker) का https पता। खाली = AI बंद। */
+    val SERVER_URL = stringPreferencesKey("server_url")
 }
